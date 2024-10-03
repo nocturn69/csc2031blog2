@@ -40,10 +40,18 @@ class Post(db.Model):
    title = db.Column(db.Text, nullable=False)
    body = db.Column(db.Text, nullable=False)
 
+   def update(self, title, body):
+       self.created = datetime.now()
+       self.title = title
+       self.body = body
+       db.session.commit()
+
    def __init__(self, title, body):
        self.created = datetime.now()
        self.title = title
        self.body = body
+
+
 
 # DATABASE ADMINISTRATOR
 class MainIndexLink(MenuLink):
