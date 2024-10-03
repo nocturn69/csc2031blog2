@@ -8,3 +8,9 @@ from accounts.views import accounts_bp
 
 # REGISTER BLUEPRINTS
 app.register_blueprint(accounts_bp)
+
+from posts.views import  posts_bp
+app.register_blueprint(posts_bp)
+
+from security.views import security_bp
+app.register_blueprint(security_bp)
