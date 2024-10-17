@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, flash, redirect, url_for, request
+from flask import Blueprint, render_template, flash, redirect, url_for, request, session
 from accounts.forms import RegistrationForm, LoginForm
 from config import User, db
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
@@ -34,16 +34,24 @@ def registration():
 def login():
     form = LoginForm()
 
-    if form.validate_on_submit():
+    if 'attempts' not in session:
+        session['attempts'] = 3  # Start with 3 attempts
 
+        # Check if attempts have run out and prevent login if so
+    if session['attempts'] <= 0:
+        flash('Account locked. Please unlock your account to try again.', category='danger')
+        return redirect(url_for('accounts.locked'))  # Redirect to the locked page
+
+    if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
-
         if user is None or user.password != form.password.data:
-            flash('Invalid email or password', category='danger')
-            return redirect(url_for('accounts.login'))
+            session['attempts'] -= 1  # Reduce attempts
+            flash(f'Invalid email or password. Attempts remaining: {session["attempts"]}', category='danger')
+            return redirect(url_for('accounts.login'))  # Reload login form
 
-
+        # Successful login - Reset attempts and redirect
+        session['attempts'] = 3  # Reset attempts on successful login
         flash('You have successfully logged in!', category='success')
         return redirect(url_for('accounts.account'))
 
@@ -52,3 +60,16 @@ def login():
 @accounts_bp.route('/account')
 def account():
     return render_template('accounts/account.html')
+
+@accounts_bp.route('/LOCKEDACC')
+def locked():
+    """Page shown when the account is locked."""
+    return render_template('accounts/LOCKEDACC.html')
+
+@accounts_bp.route('/unlock', methods=['POST'])
+def unlock():
+    """Unlock the account and reset attempts."""
+    session['attempts'] = 3  # Reset attempts
+    flash('Your account has been unlocked. You can try logging in again.', category='info')
+    return redirect(url_for('accounts.login'))
+
