@@ -3,6 +3,8 @@ from flask_migrate import Migrate
 from sqlalchemy import MetaData
 from datetime import datetime
 from flask import Flask, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
@@ -33,6 +35,12 @@ metadata = MetaData(
 
 db = SQLAlchemy(app, metadata=metadata)
 migrate = Migrate(app, db)
+
+limiter = Limiter(
+    get_remote_address,  # Limits based on the user's IP address
+    app=app,
+    default_limits=["500 per day"],  # Application-wide rate limit
+)
 
 # DATABASE TABLES
 class Post(db.Model):
@@ -68,9 +76,11 @@ class User(db.Model):
     firstname = db.Column(db.String(100), nullable=False)
     lastname = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(100), nullable=False)
+
     dummy_column = db.Column(db.String(50), nullable=True)
     # User posts
     posts = db.relationship("Post", order_by=Post.id, back_populates="user")
+
 
     def __init__(self, email, firstname, lastname, phone, password):
         self.email = email
@@ -81,7 +91,8 @@ class User(db.Model):
 
 
 
-# DATABASE ADMINISTRATOR
+
+    # DATABASE ADMINISTRATOR
 class MainIndexLink(MenuLink):
      def get_url(self):
          return url_for('index')
