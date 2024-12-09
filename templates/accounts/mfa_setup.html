@@ -3,12 +3,15 @@
 {% block content %}
 <div class="container">
     <h1>Set Up MFA</h1>
-    <p>Use the key below to set up your authenticator application:</p>
+    <p>Use the key below or scan the QR code to set up your authenticator application:</p>
     <div class="alert alert-info">
         <strong>Your MFA Key:</strong> {{ mfa_key }}
     </div>
+    <div>
+        <img src="data:image/png;base64,{{ qr_code_data }}" alt="MFA QR Code">
+    </div>
     <p>
-        Scan this key in your authenticator app to generate MFA codes. Once done, you can log in with MFA enabled.
+        After setting up your authenticator app, you can log in with MFA enabled.
     </p>
     <a href="{{ url_for('accounts.login') }}" class="btn btn-primary">Go to Login</a>
 </div>

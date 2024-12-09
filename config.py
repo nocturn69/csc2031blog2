@@ -10,6 +10,7 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 import secrets
+import pyotp
 
 app = Flask(__name__)
 # DATABASE CONFIGURATION
@@ -93,6 +94,9 @@ class User(db.Model):
         self.phone = phone
         self.password = password
         self.mfa_key = mfa_key
+
+    def verifypin(self,pin):
+        return pyotp.TOTP(self.mfa_key).verify(pin)
 
 
 

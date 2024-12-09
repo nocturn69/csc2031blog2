@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, flash, redirect, url_for, request,
 from accounts.forms import RegistrationForm, LoginForm
 from config import User, db, limiter
 from flask_limiter.util import get_remote_address
-import pyotp
+import pyotp, io, base64
+import qrcode
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
 
 
@@ -30,10 +31,15 @@ def registration():
         db.session.add(new_user)
         db.session.commit()
 
+        # Generate the QR code URI
+        totp = pyotp.TOTP(mfa_key)
+        qr_code_uri = totp.provisioning_uri(form.email.data, issuer_name="YourAppName")
+
         flash('Account Created. Please set up MFA.', category='success')
-        return redirect(url_for('accounts.mfa_setup', mfa_key=mfa_key))
+        return redirect(url_for('accounts.mfa_setup', mfa_key=mfa_key, qr_code_uri=qr_code_uri))
 
     return render_template('accounts/registration.html', form=form)
+
 
 @accounts_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
@@ -55,14 +61,10 @@ def login():
             flash(f'Invalid email or password. Attempts remaining: {session["attempts"]}', category='danger')
             return redirect(url_for('accounts.login'))
 
-        if not user.mfa_enabled:
-            flash('You must set up MFA before logging in.', category='warning')
-            return redirect(url_for('accounts.mfa_setup', mfa_key=user.mfa_key))
 
         # Verify MFA PIN
-        mfa_pin = form.mfa_pin.data  # Assume form includes MFA PIN field
-        totp = pyotp.TOTP(user.mfa_key)
-        if not totp.verify(mfa_pin):
+        mfa_pin = form.pin.data  # Assume form includes MFA PIN field
+        if not user.verifypin(mfa_pin):
             session['attempts'] -= 1
             flash(f'Invalid MFA PIN. Attempts remaining: {session["attempts"]}', category='danger')
             return redirect(url_for('accounts.login'))
@@ -78,19 +80,25 @@ def login():
 
     return render_template('accounts/login.html', form=form)
 
+
 @accounts_bp.route('/account')
 def account():
     return render_template('accounts/account.html')
 
-@accounts_bp.route('/mfa_setup', methods=['GET'])
+
+@accounts_bp.route('/mfa_setup')
 def mfa_setup():
     mfa_key = request.args.get('mfa_key')
-    if not mfa_key:
-        flash('MFA key is missing!', category='danger')
-        return redirect(url_for('accounts.login'))
+    qr_code_uri = request.args.get('qr_code_uri')
 
-    return render_template('accounts/mfa_setup.html', mfa_key=mfa_key)
+    # Generate QR code
+    qr_img = qrcode.make(qr_code_uri)
+    buffer = io.BytesIO()
+    qr_img.save(buffer, format="PNG")
+    buffer.seek(0)
+    qr_code_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
 
+    return render_template('accounts/mfa_setup.html', mfa_key=mfa_key, qr_code_data=qr_code_data)
 @accounts_bp.route('/LOCKEDACC')
 def locked():
     """Page shown when the account is locked."""
