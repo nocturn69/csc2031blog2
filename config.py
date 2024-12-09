@@ -76,18 +76,24 @@ class User(db.Model):
     firstname = db.Column(db.String(100), nullable=False)
     lastname = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(100), nullable=False)
-
     dummy_column = db.Column(db.String(50), nullable=True)
+
+
+    # MFA-related fields
+    mfa_key = db.Column(db.String(32), nullable=False, default="")  # Empty by default
+    mfa_enabled = db.Column(db.Boolean, nullable=False, default=False)
+
     # User posts
     posts = db.relationship("Post", order_by=Post.id, back_populates="user")
 
-
-    def __init__(self, email, firstname, lastname, phone, password):
+    def __init__(self, email, firstname, lastname, phone, password, mfa_key=""):
         self.email = email
         self.firstname = firstname
         self.lastname = lastname
         self.phone = phone
         self.password = password
+        self.mfa_key = mfa_key
+
 
 
 
@@ -100,12 +106,12 @@ class MainIndexLink(MenuLink):
 class PostView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
-    column_list = ('id', 'userid', 'created', 'title', 'body', 'user')
+    column_list = ('id', 'userid', 'created', 'title', 'body', 'user','mfa_key', 'mfa_enabled')
 
 class UserView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
-    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts')
+    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts','mfa_key', 'mfa_enabled')
 
 admin = Admin(app, name='DB Admin', template_mode='bootstrap4')
 admin._menu = admin._menu[1:]
